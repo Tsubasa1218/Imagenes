@@ -50,6 +50,7 @@ public:
     int calcMax(QImage &imagen);
     void filtroSobel(QImage & imagen);
     void filtroPrewitt(QImage & imagen);
+    void filtroRoberts(QImage & imagen);
     QVector<double> getData(int tipo);
 };
 

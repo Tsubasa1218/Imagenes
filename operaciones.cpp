@@ -330,6 +330,8 @@ void Operaciones::convolucion(QImage & imagen, int numVecinos, int tipo){
         filtroSobel(imagen);
     else if(tipo == 13)
         filtroPrewitt(imagen);
+    else if(tipo==14)
+        filtroRoberts(imagen);
 }
 
 void Operaciones::filtroGaussiano(QImage & imagen){
@@ -461,7 +463,7 @@ void Operaciones::filtroNagao(QImage & imagen){
 
             varianza[0] = (matrixC1[i][j] - promedio[0])*(matrixC1[i][j] - promedio[0])
                     + (matrixC1[i-1][j-1] - promedio[0])*(matrixC1[i-1][j-1] - promedio[0]);
-            + (matrixC1[i-2][j-1] - promedio[0])*(matrixC1[i-2][j-1] - promedio[0])
+                    + (matrixC1[i-2][j-1] - promedio[0])*(matrixC1[i-2][j-1] - promedio[0])
                     + (matrixC1[i-1][j] - promedio[0])*(matrixC1[i-1][j] - promedio[0])
                     + (matrixC1[i-2][j] - promedio[0])*(matrixC1[i-2][j] - promedio[0])
                     + (matrixC1[i-1][j+1] - promedio[0])*(matrixC1[i-1][j+1] - promedio[0])
@@ -770,7 +772,55 @@ QVector<double> Operaciones::getData(int tipo){
    return data;
 }
 
+void Operaciones::filtroRoberts(QImage & imagen){
+    int h1[2][2] = {{1,0},{0,-1}};
+    int h2[2][2] = {{0,1},{-1,0}};
 
+
+    int matriz1[350][350];
+    int matriz2[350][350];
+    for (int i = 0; i < 350; ++i) {
+        for (int j = 0; j < 350; ++j) {
+            matriz1[i][j]=0;
+            matriz2[i][j]=0;
+        }
+    }
+
+    int acum1, acum2;
+    int m,n;
+    for(int i = 1; i<height - 1; i++){
+        for(int j = 1; j<width - 1; j++){
+            acum1 = 0;
+            acum2 = 0;
+            m=0;
+            n=0;
+            for(int k = i; k<i+2; k++){
+                for(int l = j; l<j+2; l++){
+                    acum1 += matrixC1[k][l]*h1[m][n];
+                    acum2 += matrixC1[k][l]*h2[m][n];
+                    n++;
+                }
+                m++;
+                n=0;
+            }
+            matriz1[i][j] = floor(acum1);
+            matriz2[i][j] = floor(acum2);
+
+        }
+    }
+    acum1=0;
+    for (int i = 0; i < 350; ++i) {
+        for (int j = 0; j < 350; ++j) {
+            acum1 = matriz1[i][j] + matriz2[i][j];
+            if(acum1<50){
+                acum1=0;
+            }else{
+                acum1=255;
+            }
+            imagen.setPixel(i,j, qRgb(acum1, acum1,acum1));
+        }
+    }
+}
 
 
 
