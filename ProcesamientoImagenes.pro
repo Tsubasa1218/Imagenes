@@ -6,7 +6,7 @@
 
 QT       += core gui
 
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
+greaterThan(QT_MAJOR_VERSION, 4): QT += widgets printsupport
 
 TARGET = ProcesamientoImagenes
 TEMPLATE = app
@@ -14,9 +14,15 @@ TEMPLATE = app
 
 SOURCES += main.cpp\
         mainwindow.cpp \
-    operaciones.cpp
+    operaciones.cpp \
+    qcustomplot.cpp
+
+
 
 HEADERS  += mainwindow.h \
-    operaciones.h
+    operaciones.h \
+    qcustomplot.h
+
 
 FORMS    += mainwindow.ui
+

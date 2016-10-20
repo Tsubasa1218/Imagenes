@@ -2,8 +2,8 @@
 
 Operaciones::Operaciones()
 {
-    width = 300;
-    height = 300;
+    width = 350;
+    height = 350;
     this->vecinos = 0;
     kernelValue = 0;
 
@@ -14,32 +14,31 @@ Operaciones::Operaciones()
     }
 
     for (int i = 0; i < 256; i++) {
-        pointersArray[i] = i;
+        histograma[i] = 0;
+        histogramaEcualizado[i] = i;
     }
 
 
 }
-void Operaciones::inicializarKernel(int nVal, int tipo)
+void Operaciones::inicializarKernel()
 {
-    this->vecinos = nVal;
-    this->kernelValue = (nVal*2 +1)*(nVal*2 +1);
-    if(tipo == 1){
-        int n = vecinos*2 + 1;
-        kernelGauss = (float **)malloc(n*sizeof(float *));
-        for(int i = 0; i < n; i++){
-            kernelGauss[i] = (float*)malloc(n*sizeof(float));
-        }
-        float acum = 0;
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < n; j++) {
-                kernelGauss[i][j]=(1/PI)*pow(EULER, -2*(i*i + j*j));
-                acum += kernelGauss[i][j];
-                //cout<<kernelGauss[i][j]<<" ";
-            }
-            //cout<<endl;
-        }
-        cout<<acum<<endl;
+
+
+    int n = vecinos*2 + 1;
+    kernelGauss = (float **)malloc(n*sizeof(float *));
+    for(int i = 0; i < n; i++){
+        kernelGauss[i] = (float*)malloc(n*sizeof(float));
     }
+
+    float acum = 0;
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            kernelGauss[i][j]=(1/PI)*pow(EULER, -2*(i*i + j*j));
+            acum += kernelGauss[i][j];
+        }
+    }
+
+
 }
 
 QImage Operaciones::leerImagen(QString ruta, int transf){
@@ -55,7 +54,7 @@ QImage Operaciones::leerImagen(QString ruta, int transf){
 
 
     if(transf == 1 || transf == 2 || transf == 0){
-        RGB(transf);
+        R_G_B(transf);
     }else if(transf == 3){
         for(int i = 0; i<width;i++){
             for(int j = 0; j < height ; j++){
@@ -241,6 +240,7 @@ QImage Operaciones::leerImagen(QString ruta, int transf){
 }
 
 void Operaciones::writeNewImage(QImage & imagen, int transf){
+
     if(transf == 0){
         for(int i = 0; i < width; i++){
             for(int j = 0; j<height; j++){
@@ -279,7 +279,7 @@ void Operaciones::writeNewImage(QImage & imagen, int transf){
     }
 }
 
-void Operaciones::RGB(int color){
+void Operaciones::R_G_B(int color){
     for(int i = 0; i<width;i++){
         for(int j = 0; j < height ; j++){
             if(color == 0){
@@ -297,7 +297,9 @@ void Operaciones::RGB(int color){
 }
 
 void Operaciones::convolucion(QImage & imagen, int numVecinos, int tipo){
-    inicializarKernel(numVecinos, tipo);
+    this->vecinos = numVecinos;
+    this->kernelValue = (vecinos*2 +1)*(vecinos*2 +1);
+
     if(tipo ==0){
         for(int i = vecinos; i<height - vecinos; i++){
             for(int j = vecinos; j<width - vecinos; j++){
@@ -314,13 +316,20 @@ void Operaciones::convolucion(QImage & imagen, int numVecinos, int tipo){
             }
         }
     }else if(tipo == 1){
+        inicializarKernel();
         filtroGaussiano(imagen);
+        delete kernelGauss;
+        kernelGauss = 0;
     }else if(tipo == 2 || tipo == 3){
         filtroOrden(imagen, tipo);
     }else if(tipo == 6)
         filtroSigma(imagen);
     else if(tipo == 5)
         filtroNagao(imagen);
+    else if(tipo == 12)
+        filtroSobel(imagen);
+    else if(tipo == 13)
+        filtroPrewitt(imagen);
 }
 
 void Operaciones::filtroGaussiano(QImage & imagen){
@@ -405,65 +414,361 @@ void Operaciones::filtroSigma(QImage &imagen){
 }
 
 void Operaciones::filtroNagao(QImage & imagen){
-    pixel2pointers(imagen);
-}
 
-
-void Operaciones::calcularHistograma(){
+    this->vecinos = 2;
+    float promedio[9] = {0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f};
+    float varianza[9] = {0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f};
+    float min;
     int indice;
-    for (int i = 0; i < 300; ++i) {
-        for (int j = 0; j < 300; ++j) {
-            indice = matrixC1[i][j];
-            histograma[indice] = histograma[indice] + 1;
+
+    for(int i = vecinos; i<height - vecinos; i++){
+        for(int j = vecinos; j<width - vecinos; j++){
+
+            promedio[0] = matrixC1[i][j] + matrixC1[i-1][j-1] + matrixC1[i-2][j-1] + matrixC1[i-1][j] + matrixC1[i-2][j]
+                    + matrixC1[i-1][j+1] + matrixC1[i-2][j+1];
+
+            promedio[1] = matrixC1[i][j] + matrixC1[i-1][j+1] + matrixC1[i-1][j+2] + matrixC1[i][j+1] + matrixC1[i][j+2]
+                    + matrixC1[i+1][j+1] + matrixC1[i+1][j+2];
+
+            promedio[2] = matrixC1[i][j] + matrixC1[i+1][j-1] + matrixC1[i+2][j-1] + matrixC1[i+1][j] + matrixC1[i+2][j]
+                    + matrixC1[i+1][j+1] + matrixC1[i+2][j+1];
+
+            promedio[3] = matrixC1[i][j] + matrixC1[i-1][j-2] + matrixC1[i-1][j-1] + matrixC1[i][j-1] + matrixC1[i][j-2]
+                    + matrixC1[i+1][j-2] + matrixC1[i+1][j-1];
+
+            promedio[4] = matrixC1[i][j] + matrixC1[i-1][j-1] + matrixC1[i-2][j-2] + matrixC1[i-2][j-1] + matrixC1[i-1][j]
+                    + matrixC1[i-1][j-2] + matrixC1[i][j-1];
+
+            promedio[5] = matrixC1[i][j] + matrixC1[i-1][j+1] + matrixC1[i-2][j+2] + matrixC1[i-1][j] + matrixC1[i-2][j+1]
+                    + matrixC1[i][j+1] + matrixC1[i-1][j+2];
+
+            promedio[6] = matrixC1[i][j] + matrixC1[i+1][j+1] + matrixC1[i+2][j+2] + matrixC1[i+1][j] + matrixC1[i+2][j+1]
+                    + matrixC1[i][j+1] + matrixC1[i+1][j+2];
+
+            promedio[7] = matrixC1[i+1][j-1] + matrixC1[i+2][j-2] + matrixC1[i][j-1] + matrixC1[i+1][j-2] + matrixC1[i+1][j]
+                    + matrixC1[i+2][j-1] + matrixC1[i][j];
+
+            for (int m = i-1; m < i+1; m++) {
+                for (int n = j-1; n <j+1 ; n++) {
+                    promedio[8] += matrixC1[m][n];
+                }
+            }
+
+            for(int h = 0; h<8;h++){
+                promedio[h] /= 7;
+            }
+            promedio[8] /= 9;
+
+            varianza[0] = (matrixC1[i][j] - promedio[0])*(matrixC1[i][j] - promedio[0])
+                    + (matrixC1[i-1][j-1] - promedio[0])*(matrixC1[i-1][j-1] - promedio[0]);
+            + (matrixC1[i-2][j-1] - promedio[0])*(matrixC1[i-2][j-1] - promedio[0])
+                    + (matrixC1[i-1][j] - promedio[0])*(matrixC1[i-1][j] - promedio[0])
+                    + (matrixC1[i-2][j] - promedio[0])*(matrixC1[i-2][j] - promedio[0])
+                    + (matrixC1[i-1][j+1] - promedio[0])*(matrixC1[i-1][j+1] - promedio[0])
+                    + (matrixC1[i-2][j+1] - promedio[0])*(matrixC1[i-2][j+1] - promedio[0]);
+
+            varianza[1] = (matrixC1[i][j] - promedio[1])*(matrixC1[i][j] - promedio[1])
+                    + (matrixC1[i-1][j+1] - promedio[1])*(matrixC1[i-1][j+1] - promedio[1])
+                    + (matrixC1[i-1][j+2] - promedio[1])*(matrixC1[i-1][j+2] - promedio[1])
+                    + (matrixC1[i][j+1] - promedio[1])*(matrixC1[i][j+1] - promedio[1])
+                    + (matrixC1[i][j+2] - promedio[1])*(matrixC1[i][j+2] - promedio[1])
+                    + (matrixC1[i+1][j+1] - promedio[1])*(matrixC1[i+1][j+1] - promedio[1])
+                    + (matrixC1[i+1][j+2] - promedio[1])*(matrixC1[i+1][j+2] - promedio[1]);
+
+            varianza[2] = (matrixC1[i][j] - promedio[2])*(matrixC1[i][j] - promedio[2])
+                    + (matrixC1[i+1][j-1] - promedio[2])*(matrixC1[i+1][j-1] - promedio[2])
+                    + (matrixC1[i+2][j-1] - promedio[2])*(matrixC1[i+2][j-1] - promedio[2])
+                    + (matrixC1[i+1][j] - promedio[2])*(matrixC1[i+1][j] - promedio[2])
+                    + (matrixC1[i+2][j] - promedio[2])*(matrixC1[i+2][j] - promedio[2])
+                    + (matrixC1[i+1][j+1] - promedio[2])*(matrixC1[i+1][j+1] - promedio[2])
+                    + (matrixC1[i+2][j+1] - promedio[2])*(matrixC1[i+2][j+1] - promedio[2]);
+
+            varianza[3] = (matrixC1[i][j] - promedio[3])*(matrixC1[i][j] - promedio[3])
+                    + (matrixC1[i-1][j-2] - promedio[3])*(matrixC1[i-1][j-2] - promedio[3])
+                    + (matrixC1[i-1][j-1] - promedio[3])*(matrixC1[i-1][j-1] - promedio[3])
+                    + (matrixC1[i][j-1] - promedio[3])*(matrixC1[i][j-1] - promedio[3])
+                    + (matrixC1[i][j-2] - promedio[3])*(matrixC1[i][j-2] - promedio[3])
+                    + (matrixC1[i+1][j-2] - promedio[3])*(matrixC1[i+1][j-2] - promedio[3])
+                    + (matrixC1[i+1][j-1] - promedio[3])*(matrixC1[i+1][j-1]) - promedio[3];
+
+            varianza[4] = (matrixC1[i][j] - promedio[4])*(matrixC1[i][j] - promedio[4])
+                    + (matrixC1[i-1][j-1] - promedio[4])*(matrixC1[i-1][j-1] - promedio[4])
+                    + (matrixC1[i-2][j-2] - promedio[4])*(matrixC1[i-2][j-2] - promedio[4])
+                    + (matrixC1[i-2][j-1] - promedio[4])*(matrixC1[i-2][j-1] - promedio[4])
+                    + (matrixC1[i-1][j] - promedio[4])*(matrixC1[i-1][j] - promedio[4])
+                    + (matrixC1[i-1][j-2] - promedio[4])*(matrixC1[i-1][j-2] - promedio[4])
+                    + (matrixC1[i][j-1] - promedio[4])*(matrixC1[i][j-1] - promedio[4]);
+
+            varianza[5] = (matrixC1[i][j] - promedio[5])*(matrixC1[i][j] - promedio[5])
+                    + (matrixC1[i-1][j+1] - promedio[5])*(matrixC1[i-1][j+1] - promedio[5])
+                    + (matrixC1[i-2][j+2] - promedio[5])*(matrixC1[i-2][j+2] - promedio[5])
+                    + (matrixC1[i-1][j] - promedio[5])*(matrixC1[i-1][j] - promedio[5])
+                    + (matrixC1[i-2][j+1] - promedio[5])*(matrixC1[i-2][j+1] - promedio[5])
+                    + (matrixC1[i][j+1] - promedio[5])*(matrixC1[i][j+1] - promedio[5])
+                    + (matrixC1[i-1][j+2] - promedio[5])*(matrixC1[i-1][j+2]) - promedio[5];
+
+            varianza[6] = (matrixC1[i][j] - promedio[6])*(matrixC1[i][j] - promedio[6])
+                    + (matrixC1[i+1][j+1] - promedio[6])*(matrixC1[i+1][j+1] - promedio[6])
+                    + (matrixC1[i+2][j+2] - promedio[6])*(matrixC1[i+2][j+2] - promedio[6])
+                    + (matrixC1[i+1][j] - promedio[6])*(matrixC1[i+1][j] - promedio[6])
+                    + (matrixC1[i+2][j+1] - promedio[6])*(matrixC1[i+2][j+1] - promedio[6])
+                    + (matrixC1[i][j+1] - promedio[6])*(matrixC1[i][j+1] - promedio[6])
+                    + (matrixC1[i+1][j+2] - promedio[6])*(matrixC1[i+1][j+2] - promedio[6]);
+
+            varianza[7] = (matrixC1[i+1][j-1] - promedio[7])*(matrixC1[i+1][j-1] - promedio[7])
+                    + (matrixC1[i+2][j-2] - promedio[7])*(matrixC1[i+2][j-2] - promedio[7])
+                    + (matrixC1[i][j-1] - promedio[7])*(matrixC1[i][j-1] - promedio[7])
+                    + (matrixC1[i+1][j-2] - promedio[7])*(matrixC1[i+1][j-2] - promedio[7])
+                    + (matrixC1[i+1][j] - promedio[7])*(matrixC1[i+1][j] - promedio[7])
+                    + (matrixC1[i+2][j-1] - promedio[7])*(matrixC1[i+2][j-1] - promedio[7])
+                    + (matrixC1[i][j] - promedio[7])*(matrixC1[i][j] - promedio[7]);
+
+            for (int m = i-1; m < i+1; m++) {
+                for (int n = j-1; n <j+1 ; n++) {
+                    varianza[8] += (matrixC1[m][n] -  promedio[8])*(matrixC1[m][n] -  promedio[8]);
+                }
+            }
+
+            for(int h = 0; h<8;h++){
+                varianza[h] /= 7;
+            }
+            varianza[8] /= 9;
+            min = 500.0f;
+            indice = 0;
+            for(int h = 0; h<9; h++){
+                if(promedio[h]<min){
+                    min = promedio[h];
+                    indice = h;
+                }
+            }
+
+            matrizAuxResultante[i][j] = floor(promedio[indice]);
+            imagen.setPixel(i,j, qRgb(matrizAuxResultante[i][j], matrizAuxResultante[i][j], matrizAuxResultante[i][j]));
         }
     }
 }
 
+void Operaciones::calcularHistograma(QImage &imagen){
+    for(int i = 0; i<256;i++){
+        histograma[i]=0;
+        histogramaEcualizado[i]=0;
+    }
+    int R;
+    for (int m = 0; m < height; m++) {
+        for (int n = 0; n <width ; n++) {
+            R = QColor(imagen.pixel(m,n)).red();
+            histograma[R] = histograma[R] + 1;
+        }
+    }
+}
+
+
 void Operaciones::ecualizarHistograma(){
     const int G = 256;
-    size = width*height;
+
     float oper=0.0f;
     int H[G];
     for (int i = 0; i < G; i++) {
         H[i] = 0;
     }
     H[0] = histograma[0];
+
+    //cout<<histograma[0]<<"\t"<<H[0]<<endl;
     for (int i = 1; i < G; i++) {
         H[i] = H[i-1] + histograma[i];
 
+        //cout<<histograma[i]<<"\t"<<H[i]<<endl;
     }
+    int aux;
     for (int i = 0; i < 256; i++) {
-        oper = (255/size)*H[i];
-        histogramaEcualizado[i] = floor(oper);
+        oper = (255.0f/122500.0f)*H[i];
+        aux = floorf(oper);
+        histogramaEcualizado[i] = aux;
     }
 }
 
 void Operaciones::ecualizarImagen(QImage & imagen){
     int indice;
-    for (int i = 0; i < 300; i++) {
-        for (int j = 0; j < 300; j++) {
+    for (int i = 0; i < 350; i++) {
+        for (int j = 0; j < 350; j++) {
             indice = matrixC1[i][j];
             imagen.setPixel(i,j,qRgb(histogramaEcualizado[indice], histogramaEcualizado[indice], histogramaEcualizado[indice]));
+        }
+    }
+
+}
+
+
+void Operaciones::contrasteGamma(QImage & imagen, float y){
+    float output;
+    int final_output;
+    for (int i = 0; i < 350; i++) {
+        for (int j = 0; j < 350; j++) {
+            output = pow(QColor(imagen.pixel(i,j)).red(), 1.0f/y);
+            final_output = floor(output);
+            cout<<final_output<<endl;
+            if(final_output>255)
+                final_output=255;
+            imagen.setPixel(i,j,qRgb(final_output, final_output, final_output));
+        }
+    }
+}
+
+
+void Operaciones::contrasteStretching(QImage & imagen){
+    float output;
+    int final_output;
+    int min = calcMin(imagen);
+    int max = calcMax(imagen);
+    for (int i = 0; i < 350; i++) {
+        for (int j = 0; j < 350; j++) {
+            output = ((matrixC1[i][j] - min)*250)/(max-min);
+            final_output = floor(output);
+            imagen.setPixel(i,j,qRgb(final_output, final_output, final_output));
+        }
+    }
+}
+
+int Operaciones::calcMin(QImage & imagen){
+    int min = 256;
+    for (int i = 0; i < 350; i++) {
+        for (int j = 0; j < 350; j++) {
+            if(QColor(imagen.pixel(i,j)).red()<min)
+                min = QColor(imagen.pixel(i,j)).red();
+        }
+    }
+    return min;
+}
+
+
+int Operaciones::calcMax(QImage & imagen){
+    int max = -1;
+    for (int i = 0; i < 350; i++) {
+        for (int j = 0; j < 350; j++) {
+            if(QColor(imagen.pixel(i,j)).red()>max)
+                max = QColor(imagen.pixel(i,j)).red();
+        }
+    }
+    return max;
+}
+
+void Operaciones::filtroSobel(QImage & imagen){
+
+    int h1[3][3] = {{1,2,1},{0,0,0},{-1,-2,-1}};
+    int h2[3][3] = {{1,0,-1},{2,0,-2},{1,0,-1}};
+
+
+    int matriz1[350][350];
+    int matriz2[350][350];
+    for (int i = 0; i < 350; ++i) {
+        for (int j = 0; j < 350; ++j) {
+            matriz1[i][j]=0;
+            matriz2[i][j]=0;
+        }
+    }
+
+    int acum1, acum2;
+    int m,n;
+    for(int i = 1; i<height - 1; i++){
+        for(int j = 1; j<width - 1; j++){
+            acum1 = 0;
+            acum2 = 0;
+            m=0;
+            n=0;
+            for(int k = i-1; k<i+2; k++){
+                for(int l = j - 1; l<j+2; l++){
+                    acum1 += matrixC1[k][l]*h1[m][n];
+                    acum2 += matrixC1[k][l]*h2[m][n];
+                    n++;
+                }
+                m++;
+                n=0;
+            }
+            matriz1[i][j] = floor(acum1);
+            matriz2[i][j] = floor(acum2);
+
+        }
+    }
+    acum1=0;
+    for (int i = 0; i < 350; ++i) {
+        for (int j = 0; j < 350; ++j) {
+            acum1 = matriz1[i][j] + matriz2[i][j];
+            if(acum1<50){
+                acum1=0;
+            }else{
+                acum1=255;
+            }
+            imagen.setPixel(i,j, qRgb(acum1, acum1,acum1));
+        }
+    }
+}
+
+void Operaciones::filtroPrewitt(QImage & imagen){
+
+    int h1[3][3] = {{1,1,1},{0,0,0},{-1,-1,-1}};
+    int h2[3][3] = {{1,0,-1},{1,0,-1},{1,0,-1}};
+
+
+    int matriz1[350][350];
+    int matriz2[350][350];
+    for (int i = 0; i < 350; ++i) {
+        for (int j = 0; j < 350; ++j) {
+            matriz1[i][j]=0;
+            matriz2[i][j]=0;
+        }
+    }
+
+    int acum1, acum2;
+    int m,n;
+    for(int i = 1; i<height - 1; i++){
+        for(int j = 1; j<width - 1; j++){
+            acum1 = 0;
+            acum2 = 0;
+            m=0;
+            n=0;
+            for(int k = i-1; k<i+2; k++){
+                for(int l = j - 1; l<j+2; l++){
+                    acum1 += matrixC1[k][l]*h1[m][n];
+                    acum2 += matrixC1[k][l]*h2[m][n];
+                    n++;
+                }
+                m++;
+                n=0;
+            }
+            matriz1[i][j] = floor(acum1);
+            matriz2[i][j] = floor(acum2);
+
+        }
+    }
+    acum1=0;
+    for (int i = 0; i < 350; ++i) {
+        for (int j = 0; j < 350; ++j) {
+            acum1 = matriz1[i][j] + matriz2[i][j];
+            if(acum1<50){
+                acum1=0;
+            }else{
+                acum1=255;
+            }
+            imagen.setPixel(i,j, qRgb(acum1, acum1,acum1));
         }
     }
 }
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+QVector<double> Operaciones::getData(int tipo){
+   QVector<double> data;
+   if(tipo ==1){
+       for (int i = 0; i < 256; ++i) {
+           data << (double)histograma[i];
+       }
+   }else{
+       for (int i = 0; i < 256; ++i) {
+           data << (double)histogramaEcualizado[i];
+       }
+   }
+   return data;
+}
 
 
 
