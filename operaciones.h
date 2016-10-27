@@ -52,6 +52,7 @@ public:
     void filtroPrewitt(QImage & imagen);
     void filtroRoberts(QImage & imagen);
     QVector<double> getData(int tipo);
+    void otsuThreshold();
 };
 
 #endif // OPERACIONES_H
