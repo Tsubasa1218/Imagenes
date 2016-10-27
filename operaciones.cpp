@@ -823,28 +823,38 @@ void Operaciones::filtroRoberts(QImage & imagen){
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+void Operaciones::otsuThreshold(){
+    int total = width*height;
+    int level = 0;
+    int sumB = 0;
+    int wB = 0;
+    int wF = 0;
+    float mB = 0.0f;
+    float mF = 0.0f;
+    float maximum = o.of;
+    int sum1 = 0;
+    int vectorAux[256];
+    for(int i = 0; i<256;i++){
+        vectorAux[i] = i;
+    }
+    for(int i = 0; i<256;i++){
+        sum1 += vectorAux[i]*histograma[i];
+    }
+    for(int i = 0; i<256;i++){
+        wB = wB + histograma[i];
+        if(wB == 0)
+            continue;
+        wF = total - wB;
+        if(wF == 0){
+            break;
+        }
+        sumB = sumB + (i - 1)*histograma[i];
+        mB = (float)sumB/wB;
+        mF = (sum1 - sumB)/wF;
+        float between = wB*wF*(mB - mF)*(mB-mF);
+        if(between >= maximum){
+            level = i;
+            maximum = between;
+        }
+    }
+}
