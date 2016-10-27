@@ -6,7 +6,7 @@ Operaciones::Operaciones()
     height = 350;
     this->vecinos = 0;
     kernelValue = 0;
-
+    threshold = 0;
     for(int i = 0; i<width;i++){
         for(int j = 0; j < height ; j++){
             matrizAuxResultante[i][j] = 0;
@@ -562,6 +562,7 @@ void Operaciones::calcularHistograma(QImage &imagen){
             histograma[R] = histograma[R] + 1;
         }
     }
+    otsuThreshold();
 }
 
 
@@ -597,6 +598,7 @@ void Operaciones::ecualizarImagen(QImage & imagen){
             imagen.setPixel(i,j,qRgb(histogramaEcualizado[indice], histogramaEcualizado[indice], histogramaEcualizado[indice]));
         }
     }
+    otsuThreshold();
 
 }
 
@@ -695,7 +697,7 @@ void Operaciones::filtroSobel(QImage & imagen){
     for (int i = 0; i < 350; ++i) {
         for (int j = 0; j < 350; ++j) {
             acum1 = matriz1[i][j] + matriz2[i][j];
-            if(acum1<50){
+            if(acum1>threshold){
                 acum1=0;
             }else{
                 acum1=255;
@@ -746,7 +748,7 @@ void Operaciones::filtroPrewitt(QImage & imagen){
     for (int i = 0; i < 350; ++i) {
         for (int j = 0; j < 350; ++j) {
             acum1 = matriz1[i][j] + matriz2[i][j];
-            if(acum1<50){
+            if(acum1>threshold){
                 acum1=0;
             }else{
                 acum1=255;
@@ -812,7 +814,7 @@ void Operaciones::filtroRoberts(QImage & imagen){
     for (int i = 0; i < 350; ++i) {
         for (int j = 0; j < 350; ++j) {
             acum1 = matriz1[i][j] + matriz2[i][j];
-            if(acum1<50){
+            if(acum1>threshold){
                 acum1=0;
             }else{
                 acum1=255;
@@ -825,36 +827,38 @@ void Operaciones::filtroRoberts(QImage & imagen){
 
 void Operaciones::otsuThreshold(){
     int total = width*height;
-    int level = 0;
-    int sumB = 0;
+
+    float sum = 0;
+    for (int t=0 ; t<256 ; t++)
+        sum += t * histograma[t];
+
+    float sumB = 0;
     int wB = 0;
     int wF = 0;
-    float mB = 0.0f;
-    float mF = 0.0f;
-    float maximum = o.of;
-    int sum1 = 0;
-    int vectorAux[256];
-    for(int i = 0; i<256;i++){
-        vectorAux[i] = i;
+
+    float varMax = 0;
+    threshold = 0;
+
+    for (int t=0 ; t<256 ; t++) {
+       wB += histograma[t];               // Weight Background
+       if (wB == 0) continue;
+
+       wF = total - wB;                 // Weight Foreground
+       if (wF == 0) break;
+
+       sumB += (float) (t * histograma[t]);
+
+       float mB = sumB / wB;            // Mean Background
+       float mF = (sum - sumB) / wF;    // Mean Foreground
+
+       // Calculate Between Class Variance
+       float varBetween = (float)wB * (float)wF * (mB - mF) * (mB - mF);
+
+       // Check if new maximum found
+       if (varBetween > varMax) {
+          varMax = varBetween;
+          threshold = t;
+       }
     }
-    for(int i = 0; i<256;i++){
-        sum1 += vectorAux[i]*histograma[i];
-    }
-    for(int i = 0; i<256;i++){
-        wB = wB + histograma[i];
-        if(wB == 0)
-            continue;
-        wF = total - wB;
-        if(wF == 0){
-            break;
-        }
-        sumB = sumB + (i - 1)*histograma[i];
-        mB = (float)sumB/wB;
-        mF = (sum1 - sumB)/wF;
-        float between = wB*wF*(mB - mF)*(mB-mF);
-        if(between >= maximum){
-            level = i;
-            maximum = between;
-        }
-    }
+    cout<<threshold<<endl;
 }

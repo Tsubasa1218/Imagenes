@@ -33,6 +33,8 @@ public:
     int vecinos;
     float kernelValue;
     QImage imagenRed;
+    int threshold;
+
     QImage leerImagen(QString ruta, int transf);
     void writeNewImage(QImage &imagen, int transf);
     void R_G_B(int color);
