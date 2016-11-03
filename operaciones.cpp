@@ -463,7 +463,7 @@ void Operaciones::filtroNagao(QImage & imagen){
 
             varianza[0] = (matrixC1[i][j] - promedio[0])*(matrixC1[i][j] - promedio[0])
                     + (matrixC1[i-1][j-1] - promedio[0])*(matrixC1[i-1][j-1] - promedio[0]);
-                    + (matrixC1[i-2][j-1] - promedio[0])*(matrixC1[i-2][j-1] - promedio[0])
+            + (matrixC1[i-2][j-1] - promedio[0])*(matrixC1[i-2][j-1] - promedio[0])
                     + (matrixC1[i-1][j] - promedio[0])*(matrixC1[i-1][j] - promedio[0])
                     + (matrixC1[i-2][j] - promedio[0])*(matrixC1[i-2][j] - promedio[0])
                     + (matrixC1[i-1][j+1] - promedio[0])*(matrixC1[i-1][j+1] - promedio[0])
@@ -550,7 +550,7 @@ void Operaciones::filtroNagao(QImage & imagen){
     }
 }
 
-void Operaciones::calcularHistograma(QImage &imagen){
+void Operaciones::calcularHistograma(QImage &imagen, int tipo){
     for(int i = 0; i<256;i++){
         histograma[i]=0;
         histogramaEcualizado[i]=0;
@@ -562,7 +562,19 @@ void Operaciones::calcularHistograma(QImage &imagen){
             histograma[R] = histograma[R] + 1;
         }
     }
-    otsuThreshold();
+    if(tipo == -1){
+        cout<<"No se especifico un valor valido."<<endl;
+        return;
+    }
+    if(tipo == 1){
+        otsuThreshold();
+    }else if(tipo == 2){
+        isodataThreshold();
+    }else{
+        threshold = tipo;
+    }
+
+    //cout<<threshold<<endl;
 }
 
 
@@ -761,17 +773,17 @@ void Operaciones::filtroPrewitt(QImage & imagen){
 
 
 QVector<double> Operaciones::getData(int tipo){
-   QVector<double> data;
-   if(tipo ==1){
-       for (int i = 0; i < 256; ++i) {
-           data << (double)histograma[i];
-       }
-   }else{
-       for (int i = 0; i < 256; ++i) {
-           data << (double)histogramaEcualizado[i];
-       }
-   }
-   return data;
+    QVector<double> data;
+    if(tipo ==1){
+        for (int i = 0; i < 256; ++i) {
+            data << (double)histograma[i];
+        }
+    }else{
+        for (int i = 0; i < 256; ++i) {
+            data << (double)histogramaEcualizado[i];
+        }
+    }
+    return data;
 }
 
 void Operaciones::filtroRoberts(QImage & imagen){
@@ -840,25 +852,71 @@ void Operaciones::otsuThreshold(){
     threshold = 0;
 
     for (int t=0 ; t<256 ; t++) {
-       wB += histograma[t];               // Weight Background
-       if (wB == 0) continue;
+        wB += histograma[t];               // Weight Background
+        if (wB == 0) continue;
 
-       wF = total - wB;                 // Weight Foreground
-       if (wF == 0) break;
+        wF = total - wB;                 // Weight Foreground
+        if (wF == 0) break;
 
-       sumB += (float) (t * histograma[t]);
+        sumB += (float) (t * histograma[t]);
 
-       float mB = sumB / wB;            // Mean Background
-       float mF = (sum - sumB) / wF;    // Mean Foreground
+        float mB = sumB / wB;            // Mean Background
+        float mF = (sum - sumB) / wF;    // Mean Foreground
 
-       // Calculate Between Class Variance
-       float varBetween = (float)wB * (float)wF * (mB - mF) * (mB - mF);
+        // Calculate Between Class Variance
+        float varBetween = (float)wB * (float)wF * (mB - mF) * (mB - mF);
 
-       // Check if new maximum found
-       if (varBetween > varMax) {
-          varMax = varBetween;
-          threshold = t;
-       }
+        // Check if new maximum found
+        if (varBetween > varMax) {
+            varMax = varBetween;
+            threshold = t;
+        }
     }
-    cout<<threshold<<endl;
+    cout<<"OTSU "<<threshold<<endl;
 }
+
+void Operaciones::isodataThreshold(){
+    long int total1, total2;
+    float primerIt, segundaIt,  promedio1, promedio2;
+    primerIt = 0.0f;
+    segundaIt = 0.0f;
+
+    for (int i = 0; i < 256; ++i) {
+        promedio1 = 0.0f;
+        promedio2 = 0.0f;
+        total1 = 0;
+        total2 = 0;
+        primerIt = segundaIt;
+
+        for (int j = 0; j < i; ++j) {
+            promedio1 += j * histograma[j];
+            total1 += histograma[j];
+        }
+
+        if(total1 == 0){
+            promedio1 = 0.0f;
+        }else{
+            promedio1 = promedio1/(float)total1;
+        }
+
+        for (int j = i; j < 256; ++j) {
+            promedio2 += j * histograma[j];
+            total2 += histograma[j];
+        }
+        if(total2 == 0){
+            promedio2 = 0.0f;
+        }else{
+            promedio2 = promedio2/(float)total2;
+        }
+
+        segundaIt = (promedio1 + promedio2)*0.5f;
+        //cout<<"Iteracion: "<<i<<"\t"<<total1<<"\t"<<total2<<"\tResta: "<<(segundaIt-primerIt)<<endl;
+        if((segundaIt-primerIt)<0.00001f){
+            threshold = floorf(segundaIt);
+            break;
+        }
+
+    }
+    cout<<"ISODATA "<<threshold<<endl;
+}
+

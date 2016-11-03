@@ -79,6 +79,7 @@ void MainWindow::on_botonTrans_clicked()
 
 void MainWindow::on_boton_filtro_clicked()
 {
+
     int numVecinos = ui->numVecinos->text().toInt();
     if(ui->comboFiltros->currentText() == "Promedio"){
         transformer->convolucion(imagenFinal, numVecinos, 0);
@@ -120,7 +121,21 @@ void MainWindow::on_ecualizarBoton_clicked()
 
 void MainWindow::on_calcularHistogramaButton_clicked()
 {
-    transformer->calcularHistograma(imagenFinal);
+    int threshold;
+    threshold = -1;
+    if(ui->manualThreshold->isChecked()){
+        try{
+            threshold = ui->userThreshold->text().toInt();
+        }catch(...){
+            cout<<"Error"<<endl;
+        }
+    }else if(ui->isoButton->isChecked()){
+        threshold = 2;
+    }else if(ui->otsuButton->isChecked()){
+        threshold = 1;
+    }
+
+    transformer->calcularHistograma(imagenFinal, threshold);
     mostrarHistograma(1);
 }
 

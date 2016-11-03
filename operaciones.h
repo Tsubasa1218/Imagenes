@@ -1,4 +1,3 @@
-
 #ifndef OPERACIONES_H
 #define OPERACIONES_H
 
@@ -43,7 +42,7 @@ public:
     void filtroOrden(QImage & imagen, int tipo);
     void filtroSigma(QImage & imagen);
     void filtroNagao(QImage & imagen);
-    void calcularHistograma(QImage & imagen);
+    void calcularHistograma(QImage & imagen, int tipo);
     void ecualizarHistograma();
     void ecualizarImagen(QImage & imagen);
     void contrasteGamma(QImage & imagen, float y);
@@ -55,6 +54,7 @@ public:
     void filtroRoberts(QImage & imagen);
     QVector<double> getData(int tipo);
     void otsuThreshold();
+    void isodataThreshold();
 };
 
 #endif // OPERACIONES_H
