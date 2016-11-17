@@ -1,6 +1,7 @@
 
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include <math.h>
 
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -26,12 +27,146 @@ void MainWindow::on_botonAbrir_clicked()
                                                    tr("Busca la imagen")
                                                    );
 
-    QPixmap imagenOriginal;
+    /*QPixmap imagenOriginal;
 
     imagenOriginal.load(textoImagen);
 
     QPixmap imagenOriginal2 = imagenOriginal.scaled(350,350);
-    ui->imagenF->setPixmap(imagenOriginal2);
+    ui->imagenF->setPixmap(imagenOriginal2);*/
+
+    QImage imagenPrueba(textoImagen);
+
+    QList<int*> kluster1;
+    QList<int*> kluster2;
+    QList<int*> kluster3;
+    QList<int*> kluster4;
+
+    int c1[3] = {0,0,0};
+    int c2[3] = {120,120,120};
+    int c3[3] = {180,180,180};
+    int c4[3] = {255,255,255};
+
+    int c1v[3] = {0,0,0};
+    int c2v[3] = {120,120,120};
+    int c3v[3] = {180,180,180};
+    int c4v[3] = {255,255,255};
+
+    //int m1 = 0;
+    //int m2 = 0;
+    //int m3 = 0;
+    //int m4=0;
+    int min1=0;
+
+    while(c1[0] == c1v[0] && c1[1] == c1v[1] && c1[2] == c1v[2] &&
+          c2[0] == c2v[0] && c2[1] == c2v[1] && c2[2] == c2v[2] &&
+          c3[0] == c3v[0] && c3[1] == c3v[1] && c3[2] == c3v[2] &&
+          c4[0] == c4v[0] && c4[1] == c4v[1] && c4[2] == c4v[2]){
+        for(int i = 0; i<3;i++){
+            c1v[i] = c1[i];
+            c2v[i] = c2[i];
+            c3v[i] = c3[i];
+            c4v[i] = c4[i];
+        }
+        kluster1.clear();
+        kluster2.clear();
+        kluster3.clear();
+        kluster4.clear();
+
+        for(int i = 0; i<imagenPrueba.width();i++){
+            for(int j = 0; j < imagenPrueba.height() ; j++){
+                int R = QColor(imagenPrueba.pixel(i,j)).red();
+                int G = QColor(imagenPrueba.pixel(i,j)).green();
+                int B = QColor(imagenPrueba.pixel(i,j)).blue();
+
+                const int m1 = sqrt((R-c1[0])*(R-c1[0]) + (G-c1[1])*(G-c1[1]) +(B-c1[2])*(B-c1[2]));
+                const int m2 = sqrt((R-c2[0])*(R-c2[0]) + (G-c2[1])*(G-c2[1]) +(B-c2[2])*(B-c2[2]));
+                const int m3 = sqrt((R-c3[0])*(R-c3[0]) + (G-c3[1])*(G-c3[1]) +(B-c3[2])*(B-c3[2]));
+                const int m4 = sqrt((R-c4[0])*(R-c4[0]) + (G-c4[1])*(G-c4[1]) +(B-c4[2])*(B-c4[2]));
+
+                min1 = min(min(m1,m2), min(m3,m4));
+
+                if (min1 == m1){
+                    int aux[5] ={R, G , B, i, j};
+                    kluster1 << aux;
+                }else if (min1 == m2){
+                    int aux[5] ={R, G , B, i, j};
+                    kluster2 << aux;
+                }else if (min1 == m3){
+                    int aux[5] ={R, G , B, i, j};
+                    kluster3 << aux;
+                }else if (min1 == m4){
+                    int aux[5] ={R, G , B, i, j};
+                    kluster4 << aux;
+                }
+
+            }
+        }
+
+        int pr;
+        int pg;
+        int pb;
+
+        for(int i = 0; i<kluster1.size();i++){
+
+            pr += kluster1[i][0];
+            pg += kluster1[i][1];
+            pb += kluster1[i][2];
+
+        }
+        c1[0] = floor(pr/kluster1.size());
+        c1[1] = floor(pg/kluster1.size());
+        c1[3] = floor(pb/kluster1.size());
+
+        for(int i = 0; i<kluster2.size();i++){
+            pr += kluster2[i][0];
+            pg += kluster2[i][1];
+            pb += kluster2[i][2];
+        }
+        c2[0] = floor(pr/kluster2.size());
+        c2[1] = floor(pg/kluster2.size());
+        c2[3] = floor(pb/kluster2.size());
+
+        for(int i = 0; i<kluster3.size();i++){
+            pr += kluster3[i][0];
+            pg += kluster3[i][1];
+            pb += kluster3[i][2];
+        }
+        c3[0] = floor(pr/kluster3.size());
+        c3[1] = floor(pg/kluster3.size());
+        c3[3] = floor(pb/kluster3.size());
+
+        for(int i = 0; i<kluster4.size();i++){
+            pr += kluster4[i][0];
+            pg += kluster4[i][1];
+            pb += kluster4[i][2];
+        }
+        c4[0] = floor(pr/kluster4.size());
+        c4[1] = floor(pg/kluster4.size());
+        c4[3] = floor(pb/kluster4.size());
+
+    }
+
+    //construir la imagen
+    for(int k = i-vecinos; k<i+vecinos+1; k++){
+        for(int l = j - vecinos; l<j+vecinos+1; l++){
+            acum += matrixC1[k][l];
+        }
+    }
+
+    acum /= kernelValue;
+    matrizAuxResultante[i][j] = floor(acum);
+    imagen.setPixel(i,j, qRgb(matrizAuxResultante[i][j], matrizAuxResultante[i][j], matrizAuxResultante[i][j]));
+        QPixmap imagenOriginal;
+        imagenOriginal.load(textoImagen);
+        QPixmap imagenOriginal2 = imagenOriginal.scaled(350,350);
+        ui->imagenF->setPixmap(imagenOriginal2);
+
+    /*QPixmap imagenOriginal;
+
+    imagenOriginal.load(textoImagen);
+
+    QPixmap imagenOriginal2 = imagenOriginal.scaled(350,350);
+    ui->imagenF->setPixmap(imagenOriginal2);*/
 }
 
 void MainWindow::on_botonTrans_clicked()
@@ -79,7 +214,6 @@ void MainWindow::on_botonTrans_clicked()
 
 void MainWindow::on_boton_filtro_clicked()
 {
-
     int numVecinos = ui->numVecinos->text().toInt();
     if(ui->comboFiltros->currentText() == "Promedio"){
         transformer->convolucion(imagenFinal, numVecinos, 0);
@@ -121,21 +255,7 @@ void MainWindow::on_ecualizarBoton_clicked()
 
 void MainWindow::on_calcularHistogramaButton_clicked()
 {
-    int threshold;
-    threshold = -1;
-    if(ui->manualThreshold->isChecked()){
-        try{
-            threshold = ui->userThreshold->text().toInt();
-        }catch(...){
-            cout<<"Error"<<endl;
-        }
-    }else if(ui->isoButton->isChecked()){
-        threshold = 2;
-    }else if(ui->otsuButton->isChecked()){
-        threshold = 1;
-    }
-
-    transformer->calcularHistograma(imagenFinal, threshold);
+    transformer->calcularHistograma(imagenFinal);
     mostrarHistograma(1);
 }
 
